@@ -3,13 +3,14 @@ import pickle
 import pandas as pd
 from datetime import datetime
 
-# Load model and columns
+# ---------------- LOAD MODEL ---------------- #
 model = pickle.load(open('final_model.pkl', 'rb'))
 columns = pickle.load(open('columns.pkl', 'rb'))
 
+# ---------------- TITLE ---------------- #
 st.title('🚗 Car Price Prediction')
 
-# ---------------- INPUT FIELDS ---------------- #
+# ---------------- INPUTS ---------------- #
 
 insurance_validity = st.selectbox(
     'Insurance validity:',
@@ -45,42 +46,46 @@ torque = st.number_input('Torque (Nm):')
 
 manufacturing_year = st.number_input('Manufacturing Year:', min_value=1990, max_value=2026)
 
-# ---------------- PREDICTION ---------------- #
+# ---------------- PREDICT ---------------- #
 
 if st.button('Predict Price'):
 
-    # Feature engineering
-    current_year = datetime.now().year
-    car_age = current_year - manufacturing_year
+    try:
+        # Feature engineering
+        current_year = datetime.now().year
+        car_age = current_year - manufacturing_year
 
-    # Create input dictionary
-    input_dict = {
-        'kms_driven': kms_driven,
-        'seats': seats,
-        'mileage(kmpl)': mileage,
-        'engine(cc)': engine,
-        'max_power(bhp)': max_power,
-        'torque(Nm)': torque,
-        'car_age': car_age,
+        # Input dictionary
+        input_dict = {
+            'kms_driven': kms_driven,
+            'seats': seats,
+            'mileage(kmpl)': mileage,
+            'engine(cc)': engine,
+            'max_power(bhp)': max_power,
+            'torque(Nm)': torque,
+            'car_age': car_age,
+            'insurance_validity': insurance_validity,
+            'fuel_type': fuel_type,
+            'ownership': ownership,
+            'transmission': transmission
+        }
 
-        'insurance_validity': insurance_validity,
-        'fuel_type': fuel_type,
-        'ownership': ownership,
-        'transmission': transmission
-    }
+        # Convert to DataFrame
+        input_df = pd.DataFrame([input_dict])
 
-    # Convert to DataFrame
-    input_df = pd.DataFrame([input_dict])
+        # Convert categorical to dummies
+        input_df = pd.get_dummies(input_df)
 
-    # Apply get_dummies (same as training)
-    input_df = pd.get_dummies(input_df)
+        # Match training columns
+        input_df = input_df.reindex(columns=columns, fill_value=0)
 
-    # Match columns with training data
-    input_df = input_df.reindex(columns=columns, fill_value=0)
+        # Prediction
+        prediction = model.predict(input_df)[0]
 
-    # Prediction
-    prediction = model.predict(input_df)[0]
+        price_rs = int(prediction * 100000)
 
-    price_rs = int(prediction * 100000)
+        st.success(f'💰 Predicted Price: ₹ {price_rs:,} ({prediction:.2f} Lakhs)')
 
-    st.success(f'💰 Predicted Price: ₹ {price_rs:,} ({prediction:.2f} Lakhs)')
+    except Exception as e:
+        st.error("⚠️ Something went wrong. Check inputs or model files.")
+        st.write(e)
