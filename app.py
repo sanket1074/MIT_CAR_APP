@@ -2,6 +2,7 @@ import streamlit as st
 import pickle
 import pandas as pd
 from datetime import datetime
+import numpy as np
 
 # ---------------- PAGE CONFIG ---------------- #
 st.set_page_config(
@@ -22,7 +23,7 @@ st.markdown("""
     color: white;
 }
 
-/* Card styling */
+/* Card */
 .card {
     background: #1c1f26;
     padding: 20px;
@@ -45,7 +46,7 @@ st.markdown("""
     color: #ccc;
 }
 
-/* Result card */
+/* Result */
 .result-card {
     background: linear-gradient(to right, #0072ff, #00c6ff);
     padding: 30px;
@@ -60,14 +61,12 @@ st.markdown("""
 
 # ---------------- HEADER ---------------- #
 st.markdown('<div class="title">🚗 Car Price Prediction</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Predict used car prices using Machine Learning</div>', unsafe_allow_html=True)
-
+st.markdown('<div class="subtitle">ML-powered used car price estimator</div>', unsafe_allow_html=True)
 st.markdown("---")
 
 # ---------------- INPUT SECTION ---------------- #
 col1, col2 = st.columns(2)
 
-# LEFT CARD
 with col1:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### 🔧 Basic Details")
@@ -96,7 +95,6 @@ with col1:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# RIGHT CARD
 with col2:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("### ⚙️ Technical Details")
@@ -112,48 +110,59 @@ with col2:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- BUTTON ---------------- #
 st.markdown("<br><br>", unsafe_allow_html=True)
 
+# ---------------- PREDICTION ---------------- #
 if st.button('🚀 Predict Price'):
 
-    try:
-        current_year = datetime.now().year
-        car_age = current_year - manufacturing_year
+    with st.spinner("Predicting price... ⏳"):
+        try:
+            current_year = datetime.now().year
+            car_age = current_year - manufacturing_year
 
-        input_dict = {
-            'kms_driven': kms_driven,
-            'seats': seats,
-            'mileage(kmpl)': mileage,
-            'engine(cc)': engine,
-            'max_power(bhp)': max_power,
-            'torque(Nm)': torque,
-            'car_age': car_age,
-            'insurance_validity': insurance_validity,
-            'fuel_type': fuel_type,
-            'ownership': ownership,
-            'transmission': transmission
-        }
+            input_dict = {
+                'kms_driven': kms_driven,
+                'seats': seats,
+                'mileage(kmpl)': mileage,
+                'engine(cc)': engine,
+                'max_power(bhp)': max_power,
+                'torque(Nm)': torque,
+                'car_age': car_age,
+                'insurance_validity': insurance_validity,
+                'fuel_type': fuel_type,
+                'ownership': ownership,
+                'transmission': transmission
+            }
 
-        input_df = pd.DataFrame([input_dict])
-        input_df = pd.get_dummies(input_df)
-        input_df = input_df.reindex(columns=columns, fill_value=0)
+            input_df = pd.DataFrame([input_dict])
+            input_df = pd.get_dummies(input_df)
+            input_df = input_df.reindex(columns=columns, fill_value=0)
 
-        prediction = model.predict(input_df)[0]
-        price_rs = int(prediction * 100000)
+            prediction = model.predict(input_df)[0]
 
-        # RESULT CARD
-        st.markdown(f"""
-        <div class="result-card">
-            💰 Estimated Price <br><br>
-            ₹ {price_rs:,} <br>
-            ({prediction:.2f} Lakhs)
-        </div>
-        """, unsafe_allow_html=True)
+            # Convert to INR
+            price_rs = int(prediction * 100000)
 
-    except Exception as e:
-        st.error("⚠️ Error occurred")
-        st.write(e)
+            # Confidence range (±10%)
+            lower = prediction * 0.9
+            upper = prediction * 1.1
+
+        except Exception as e:
+            st.error("⚠️ Error occurred")
+            st.write(e)
+            st.stop()
+
+    # ---------------- RESULT DISPLAY ---------------- #
+    st.markdown(f"""
+    <div class="result-card">
+        💰 Estimated Price <br><br>
+        ₹ {price_rs:,} <br>
+        ({prediction:.2f} Lakhs) <br><br>
+        📊 Range: {lower:.2f}L – {upper:.2f}L
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.success("✅ Prediction completed successfully!")
 
 # ---------------- SIDEBAR ---------------- #
 st.sidebar.title("📌 About")
@@ -162,5 +171,5 @@ st.sidebar.info("""
 
 🔹 Model: Random Forest  
 🔹 Accuracy: ~90% R²  
-🔹 Built with Streamlit  
+🔹 Real-time prediction  
 """)
