@@ -3,59 +3,113 @@ import pickle
 import pandas as pd
 from datetime import datetime
 
+# ---------------- PAGE CONFIG ---------------- #
+st.set_page_config(
+    page_title="Car Price Predictor",
+    page_icon="🚗",
+    layout="wide"
+)
+
 # ---------------- LOAD MODEL ---------------- #
 model = pickle.load(open('final_model.pkl', 'rb'))
 columns = pickle.load(open('columns.pkl', 'rb'))
 
-# ---------------- TITLE ---------------- #
-st.title('🚗 Car Price Prediction')
+# ---------------- CUSTOM CSS ---------------- #
+st.markdown("""
+<style>
+body {
+    background-color: #0e1117;
+}
+.main {
+    background: linear-gradient(to right, #141e30, #243b55);
+    color: white;
+}
+.card {
+    background: #1c1f26;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+    margin-bottom: 20px;
+}
+.title {
+    text-align: center;
+    font-size: 40px;
+    font-weight: bold;
+}
+.subtitle {
+    text-align: center;
+    font-size: 18px;
+    color: #ccc;
+}
+.result-card {
+    background: #00c6ff;
+    background: linear-gradient(to right, #0072ff, #00c6ff);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    color: white;
+    font-size: 25px;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# ---------------- INPUTS ---------------- #
+# ---------------- HEADER ---------------- #
+st.markdown('<div class="title">🚗 Car Price Prediction</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Predict used car prices using Machine Learning</div>', unsafe_allow_html=True)
 
-insurance_validity = st.selectbox(
-    'Insurance validity:',
-    ['Comprehensive', 'Third Party insurance', 'Zero Dep', 'Not Available']
-)
+st.markdown("---")
 
-fuel_type = st.selectbox(
-    'Fuel Type:',
-    ['Petrol', 'Diesel', 'CNG']
-)
+# ---------------- INPUT SECTION ---------------- #
+col1, col2 = st.columns(2)
 
-ownership = st.selectbox(
-    'Ownership:',
-    ['First Owner', 'Second Owner', 'Third Owner', 'Fourth Owner']
-)
+with col1:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
-transmission = st.selectbox(
-    'Transmission Type:',
-    ['Manual', 'Automatic']
-)
+    insurance_validity = st.selectbox(
+        'Insurance validity',
+        ['Comprehensive', 'Third Party insurance', 'Zero Dep', 'Not Available']
+    )
 
-kms_driven = st.number_input('KMs Driven:', min_value=0)
+    fuel_type = st.selectbox(
+        'Fuel Type',
+        ['Petrol', 'Diesel', 'CNG']
+    )
 
-seats = st.number_input('Number of Seats:', min_value=2, max_value=10, value=5)
+    ownership = st.selectbox(
+        'Ownership',
+        ['First Owner', 'Second Owner', 'Third Owner', 'Fourth Owner']
+    )
 
-mileage = st.number_input('Mileage (kmpl):')
+    transmission = st.selectbox(
+        'Transmission',
+        ['Manual', 'Automatic']
+    )
 
-engine = st.number_input('Engine (cc):')
+    st.markdown('</div>', unsafe_allow_html=True)
 
-max_power = st.number_input('Max Power (bhp):')
+with col2:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
-torque = st.number_input('Torque (Nm):')
+    kms_driven = st.number_input('KMs Driven', min_value=0)
+    seats = st.number_input('Seats', min_value=2, max_value=10, value=5)
+    mileage = st.number_input('Mileage (kmpl)')
+    engine = st.number_input('Engine (cc)')
+    max_power = st.number_input('Max Power (bhp)')
+    torque = st.number_input('Torque (Nm)')
+    manufacturing_year = st.number_input('Manufacturing Year', min_value=1990, max_value=2026)
 
-manufacturing_year = st.number_input('Manufacturing Year:', min_value=1990, max_value=2026)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- PREDICT ---------------- #
+# ---------------- BUTTON ---------------- #
+st.markdown("<br>", unsafe_allow_html=True)
 
-if st.button('Predict Price'):
+if st.button('🚀 Predict Price'):
 
     try:
-        # Feature engineering
         current_year = datetime.now().year
         car_age = current_year - manufacturing_year
 
-        # Input dictionary
         input_dict = {
             'kms_driven': kms_driven,
             'seats': seats,
@@ -70,22 +124,34 @@ if st.button('Predict Price'):
             'transmission': transmission
         }
 
-        # Convert to DataFrame
         input_df = pd.DataFrame([input_dict])
-
-        # Convert categorical to dummies
         input_df = pd.get_dummies(input_df)
-
-        # Match training columns
         input_df = input_df.reindex(columns=columns, fill_value=0)
 
-        # Prediction
         prediction = model.predict(input_df)[0]
-
         price_rs = int(prediction * 100000)
 
-        st.success(f'💰 Predicted Price: ₹ {price_rs:,} ({prediction:.2f} Lakhs)')
+        # ---------------- RESULT CARD ---------------- #
+        st.markdown(f"""
+        <div class="result-card">
+            💰 Estimated Price <br><br>
+            ₹ {price_rs:,} <br>
+            ({prediction:.2f} Lakhs)
+        </div>
+        """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.error("⚠️ Something went wrong. Check inputs or model files.")
+        st.error("⚠️ Error occurred")
         st.write(e)
+
+# ---------------- SIDEBAR ---------------- #
+st.sidebar.title("📌 About")
+st.sidebar.info("""
+🚗 Car Price Prediction App  
+
+🔹 Model: Random Forest  
+🔹 Accuracy: ~90% R²  
+🔹 Built with Streamlit  
+
+Developed by Sanket 🚀
+""")
