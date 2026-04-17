@@ -1,37 +1,86 @@
 import streamlit as st
 import pickle
+import pandas as pd
+from datetime import datetime
 
-d1={'Comprehensive': 0,'Third Party insurance': 1,'Zero Dep': 2,'Not Available': 3,'Third Party': 1}
-d2={'Petrol': 0, 'Diesel': 1, 'CNG': 2}
-d3={'Manual': 0, 'Automatic': 1}
-d4={'First Owner': 1,'Second Owner': 2,'Third Owner': 3,'Fourth Owner': 4,'Fifth Owner': 5}
+# Load model and columns
+model = pickle.load(open('final_model.pkl', 'rb'))
+columns = pickle.load(open('columns.pkl', 'rb'))
 
-final_model = pickle.load(open('final_model.pkl','rb'))
+st.title('🚗 Car Price Prediction')
 
-st.title('Car Price Prediction')
+# ---------------- INPUT FIELDS ---------------- #
 
-insurance_validity = st.selectbox('Insurance validity:', list(d1.keys()))
-fuel_type = st.selectbox('Fuel Type:', list(d2.keys()))
-kms_driven = st.text_input('KMs Driven:')
-ownership = st.selectbox('Ownership:', list(d4.keys()))
-transmission = st.selectbox('Transmission Type:', list(d3.keys()))
+insurance_validity = st.selectbox(
+    'Insurance validity:',
+    ['Comprehensive', 'Third Party insurance', 'Zero Dep', 'Not Available']
+)
 
-if st.button('Predict'):
-    try:
-        kms_driven = int(kms_driven)
-    except:
-        st.error("Enter valid KMs Driven")
-        st.stop()
+fuel_type = st.selectbox(
+    'Fuel Type:',
+    ['Petrol', 'Diesel', 'CNG']
+)
 
-    insurance_validity = int(d1[insurance_validity])
-    fuel_type = int(d2[fuel_type])
-    ownership = int(d4[ownership])
-    transmission = int(d3[transmission])
+ownership = st.selectbox(
+    'Ownership:',
+    ['First Owner', 'Second Owner', 'Third Owner', 'Fourth Owner']
+)
 
-    test = [[insurance_validity, fuel_type, kms_driven, ownership, transmission]]
+transmission = st.selectbox(
+    'Transmission Type:',
+    ['Manual', 'Automatic']
+)
 
-    yp = final_model.predict(test)[0]
+kms_driven = st.number_input('KMs Driven:', min_value=0)
 
-    price_rs = int(yp * 100000)
+seats = st.number_input('Number of Seats:', min_value=2, max_value=10, value=5)
 
-    st.success(f'💰 Predicted Price: ₹ {price_rs:,} ({yp:.2f} Lakhs)')
+mileage = st.number_input('Mileage (kmpl):')
+
+engine = st.number_input('Engine (cc):')
+
+max_power = st.number_input('Max Power (bhp):')
+
+torque = st.number_input('Torque (Nm):')
+
+manufacturing_year = st.number_input('Manufacturing Year:', min_value=1990, max_value=2026)
+
+# ---------------- PREDICTION ---------------- #
+
+if st.button('Predict Price'):
+
+    # Feature engineering
+    current_year = datetime.now().year
+    car_age = current_year - manufacturing_year
+
+    # Create input dictionary
+    input_dict = {
+        'kms_driven': kms_driven,
+        'seats': seats,
+        'mileage(kmpl)': mileage,
+        'engine(cc)': engine,
+        'max_power(bhp)': max_power,
+        'torque(Nm)': torque,
+        'car_age': car_age,
+
+        'insurance_validity': insurance_validity,
+        'fuel_type': fuel_type,
+        'ownership': ownership,
+        'transmission': transmission
+    }
+
+    # Convert to DataFrame
+    input_df = pd.DataFrame([input_dict])
+
+    # Apply get_dummies (same as training)
+    input_df = pd.get_dummies(input_df)
+
+    # Match columns with training data
+    input_df = input_df.reindex(columns=columns, fill_value=0)
+
+    # Prediction
+    prediction = model.predict(input_df)[0]
+
+    price_rs = int(prediction * 100000)
+
+    st.success(f'💰 Predicted Price: ₹ {price_rs:,} ({prediction:.2f} Lakhs)')
